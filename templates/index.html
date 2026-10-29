@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionVoice AI - Deep Learning Vision & Web Verification Suite</title>
+    <!-- Modern Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Top Navigation / Header -->
+        <header class="app-header">
+            <div class="brand">
+                <span class="brand-badge">👁️‍🗨️</span>
+                <div>
+                    <h1>VisionVoice AI</h1>
+                    <p class="tagline">MobileNetV2 CNN • Semantic Refinement • Web Verification • Text-to-Speech (TTS)</p>
+                </div>
+            </div>
+            <div class="header-stats">
+                <button class="btn btn-secondary btn-sm" onclick="openSettingsModal()">
+                    <span>⚙️ Cloud Vision Key</span>
+                </button>
+                <div class="stat-pill">
+                    <span class="stat-label">Scans:</span>
+                    <span class="stat-val" id="stat-scans">0</span>
+                </div>
+                <div class="stat-pill">
+                    <span class="stat-label">Avg Conf:</span>
+                    <span class="stat-val" id="stat-conf">0%</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-container">
+            <!-- Mode Selector Bar -->
+            <div class="mode-tabs">
+                <button class="mode-btn active" onclick="switchInputMode('upload')">
+                    <span>📁 Upload Image Photo</span>
+                </button>
+                <button class="mode-btn" onclick="switchInputMode('url')">
+                    <span>🌐 Image URL</span>
+                </button>
+            </div>
+
+            <!-- Input Panels Container -->
+            <section class="input-card">
+                <!-- Mode 1: File Upload Dropzone -->
+                <div id="panel-upload" class="input-panel active">
+                    <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+                        <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="handleFileUpload(event)">
+                        <div class="dropzone-inner">
+                            <span class="drop-icon">📤</span>
+                            <h3>Drag & drop your photo here, or <span>browse file</span></h3>
+                            <p class="text-muted">Supports JPG, PNG, WEBP — Evaluates foreground colors, MobileNetV2 CNN & web knowledge</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode 2: Direct Image URL -->
+                <div id="panel-url" class="input-panel">
+                    <div class="url-input-group">
+                        <input type="url" id="web-url-input" class="form-input" placeholder="Paste direct image URL (e.g. https://.../photo.jpg)">
+                        <button class="btn btn-primary" onclick="submitImageUrl()">
+                            <span>Classify & Verify</span>
+                            <span class="icon">🔍</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loading Spinner Indicator -->
+            <div id="loading-indicator" class="loading-bar" style="display:none;">
+                <div class="spinner"></div>
+                <span>Classifying with CNN, segmenting foreground colors & verifying with web knowledge...</span>
+            </div>
+
+            <!-- Two-Column Results Dashboard (Revealed on analysis) -->
+            <section class="results-grid" id="results-section" style="display:none;">
+                <!-- Left Column: Visual Asset & Properties -->
+                <div class="card visual-card">
+                    <div class="card-header">
+                        <h3>🖼️ Visual Asset & Color Analytics</h3>
+                        <span class="badge badge-accent" id="res-source-name">Asset</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="image-viewer-frame">
+                            <img id="res-image-preview" src="" alt="Analyzed asset">
+                        </div>
+
+                        <div class="properties-list mt-3">
+                            <div class="prop-item">
+                                <span class="prop-label">Dimensions:</span>
+                                <span class="prop-val" id="res-dimensions">--</span>
+                            </div>
+                            <div class="prop-item">
+                                <span class="prop-label">Aspect Ratio:</span>
+                                <span class="prop-val" id="res-aspect">--</span>
+                            </div>
+                            <div class="prop-item">
+                                <span class="prop-label">Foreground Dominant Color:</span>
+                                <div class="color-preview">
+                                    <span class="color-dot" id="res-color-dot"></span>
+                                    <span class="prop-val" id="res-color-name">--</span>
+                                </div>
+                            </div>
+                            <div class="prop-item">
+                                <span class="prop-label">Engine Utilized:</span>
+                                <span class="prop-val" id="res-engine-used" style="font-size:0.75rem; color:var(--color-primary);">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Deep Learning Classification & Speech Synthesis -->
+                <div class="card analytics-card">
+                    <div class="card-header">
+                        <h3>🧠 Verified Classification & Speech</h3>
+                        <span class="badge badge-success">High Confidence</span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Top Prediction Callout -->
+                        <div class="top-pred-banner">
+                            <div>
+                                <span class="banner-sub">Verified Subject:</span>
+                                <h2 id="res-top-label">--</h2>
+                            </div>
+                            <div class="confidence-circle">
+                                <span id="res-top-conf">--%</span>
+                                <small>CONFIDENCE</small>
+                            </div>
+                        </div>
+
+                        <!-- Internet Web Verification Box -->
+                        <div class="verification-box mt-3" id="verification-card">
+                            <div class="verification-head">
+                                <span class="badge badge-accent">🌐 Grounded Web Verification</span>
+                                <span class="verify-src" id="res-verify-src">Wikipedia Web Knowledge Base</span>
+                            </div>
+                            <p class="verify-text" id="res-verify-text">--</p>
+                        </div>
+
+                        <!-- Top 5 Classification Breakdown Bars -->
+                        <h4 class="section-title mt-3">Confidence Breakdown:</h4>
+                        <div class="predictions-bars" id="predictions-bars">
+                            <!-- Populated dynamically -->
+                        </div>
+
+                        <!-- GenAI Caption & Text-to-Speech (TTS) Voice Player -->
+                        <div class="caption-card mt-3">
+                            <div class="caption-header">
+                                <strong>📝 Synthesized Caption & Audio Readout:</strong>
+                                <button class="btn btn-speak" onclick="playTextToSpeech()">
+                                    <span class="icon">🔊</span>
+                                    <span>Read Aloud (TTS)</span>
+                                </button>
+                            </div>
+                            <p class="caption-text" id="res-caption-text">--</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bottom: SQLite History & Audit Log -->
+            <section class="card history-card mt-4">
+                <div class="card-header">
+                    <h3>📜 Recent Recognition Audits (SQLite Persistence)</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="clearHistoryLogs()">Clear Audit Log</button>
+                </div>
+                <div class="card-body">
+                    <div class="history-table-wrapper">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Source / Asset</th>
+                                    <th>Verified Subject</th>
+                                    <th>Confidence</th>
+                                    <th>Engine</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body">
+                                <tr><td colspan="6" class="text-center text-muted">No recognition audits logged yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Settings Modal (Optional Gemini Vision Key) -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3>⚙️ Cloud Vision API Configuration</h3>
+                <button class="close-btn" onclick="closeSettingsModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-desc">
+                    By default, VisionVoice AI uses the enhanced <strong>Local MobileNetV2 CNN with Foreground Color Segmentation</strong> (100% offline, zero key required).
+                </p>
+                <p class="modal-desc mt-2">
+                    Optionally, you can enter a free <strong>Google Gemini 1.5 Flash Vision API Key</strong> for human-level visual understanding:
+                </p>
+                <div class="form-group mt-3">
+                    <label for="gemini-key-input">Gemini API Key (Optional):</label>
+                    <input type="password" id="gemini-key-input" class="modal-input" placeholder="AIzaSy...">
+                    <span class="subtext" id="key-status-text">Checking status...</span>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button class="btn btn-secondary" onclick="closeSettingsModal()">Close</button>
+                <button class="btn btn-primary" onclick="saveApiKey()">Save Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
